@@ -371,7 +371,7 @@ static const int browser_key;
 // 显示某个页面时的回调
 - (void)photoPageView:(YPPhotoPageView *)pageView didDisplayCellAtIndex:(NSUInteger)index {
     if (self.navigationController) {
-        self.title = [NSString stringWithFormat:@"%zd / %zd", index, self.photos.count];
+        self.title = [NSString stringWithFormat:@"%lu / %lu", (unsigned long)index, (unsigned long)self.photos.count];
     }
 }
 

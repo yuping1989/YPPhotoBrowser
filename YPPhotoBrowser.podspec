@@ -11,7 +11,7 @@ s.platform     = :ios, "7.0"
 s.ios.deployment_target = "7.0"
 s.source       = { :git => "https://github.com/yuping1989/YPPhotoBrowser.git", :tag => s.version}
 s.source_files = 'YPPhotoBrowser/YPPhotoBrowser/**/*.{h,m}'
-s.resources    = "YBImageBrowser/YBImageBrowser/YBImageBrowser.bundle"
+s.resources    = 'YBImageBrowser/YBImageBrowser/YBImageBrowser.bundle'
 s.requires_arc = true
 
 s.dependency 'SDWebImage'

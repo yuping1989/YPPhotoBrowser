@@ -67,7 +67,7 @@ static NSString * const kContentOffset = @"contentOffset";
     [_toolView addSubview:self.pageIndicatorLabel];
     
     NSString * path = [[NSBundle mainBundle] pathForResource:@"YPPhotoBrowser" ofType:@"bundle"];
-    NSString *imagePath = [path stringByAppendingPathComponent:@"button_more@2x"];
+    NSString *imagePath = [path stringByAppendingPathComponent:@"yp_button_more@2x"];
     UIImage *buttonImage = [UIImage imageWithContentsOfFile:imagePath];
     _moreButton = [UIButton buttonWithType:UIButtonTypeCustom];
     [_moreButton setImage:buttonImage forState:UIControlStateNormal];
@@ -145,7 +145,6 @@ static NSString * const kContentOffset = @"contentOffset";
                 [self.delegate photoPageView:self didEndDisplayingCell:cell forPhotoAtIndex:cell.index];
             }
             [cell prepareForReuse];
-            NSLog(@"Removed page at index %lu, count:%lu", (unsigned long)cell.index, (unsigned long)self.subviews.count);
         }
     }
     
@@ -267,7 +266,7 @@ static NSString * const kContentOffset = @"contentOffset";
 - (void)updatePageIndicator {
     if (!self.pageIndicatorHidden) {
         NSInteger index = self.numberOfPhotos == 0 ? 0 : self.displayingIndex + 1;
-        NSString *text = [NSString stringWithFormat:@"%lu / %lu", index, (unsigned long)self.numberOfPhotos];
+        NSString *text = [NSString stringWithFormat:@"%lu / %lu",  (unsigned long)index, (unsigned long)self.numberOfPhotos];
         self.pageIndicatorLabel.text = text;
     }
 }

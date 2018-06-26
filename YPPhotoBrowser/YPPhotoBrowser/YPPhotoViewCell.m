@@ -134,7 +134,7 @@ static CGFloat YPPhotoViewCellCaptionViewPadding = 10.0f;
             } else {
                 // 显示下载失败的图片
                 NSString * path = [[NSBundle mainBundle] pathForResource:@"YPPhotoBrowser" ofType:@"bundle"];
-                NSString *imagePath = [path stringByAppendingPathComponent:@"image_failed@2x"];
+                NSString *imagePath = [path stringByAppendingPathComponent:@"yp_image_failed@2x"];
                 UIImage *failedImage = [UIImage imageWithContentsOfFile:imagePath];
                 [self.photoView displayImage:failedImage animatied:NO];
             }
