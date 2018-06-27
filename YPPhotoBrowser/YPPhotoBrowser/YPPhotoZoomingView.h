@@ -27,6 +27,6 @@ extern NSString * const YPPhotoViewCellSingleTappedNotification;
 - (void)displayImage:(UIImage *)image animatied:(BOOL)animatied;
 
 // 重置最大和最小缩放比例
-- (void)setMaxMinZoomScalesForCurrentBounds;
+- (void)updateZoomScaleForCurrentBounds;
 
 @end

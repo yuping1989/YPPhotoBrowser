@@ -23,7 +23,7 @@ static NSString * const YPPhotoProgressNotification = @"YPPhotoProgressNotificat
 @optional
 
 /**
- 下载图片并且发送
+ 下载图片并且发送通知
  */
 - (void)startDownloadImageAndNotify;
 

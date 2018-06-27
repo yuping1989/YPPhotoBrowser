@@ -23,7 +23,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-//    [[SDImageCache sharedImageCache] clearDiskOnCompletion:^{
+    [[SDImageCache sharedImageCache] clearDiskOnCompletion:^{
         NSArray *thumbs = @[@"http://img.pconline.com.cn/images/upload/upc/tx/wallpaper/1607/31/c0/24943421_1469960308512_200x300.jpg",
                             @"http://img.pconline.com.cn/images/upload/upc/tx/wallpaper/1608/11/c0/25449432_1470929066363_200x150.jpg",
                             @"http://www.sinaimg.cn/dy/slidenews/1_t160/2016_30/63957_715785_462226.jpg",
@@ -66,7 +66,7 @@
             [self.dataSource addObject:photo];
         }
         [self.tableView reloadData];
-//    }];
+    }];
     
     
     self.segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Trasition1", @"Trasition2", @"Fade", @"Push", @"Present"]];
@@ -132,6 +132,7 @@
     browser.displayingIndex = button.tag;
 //    browser.moreButtonHidden = YES;
 //    browser.pageIndicatorHidden = YES;
+    browser.captionHidden = NO;
     switch (self.segmentedControl.selectedSegmentIndex) {
         case 0: {
             for (YPPhoto *photo in self.dataSource) {

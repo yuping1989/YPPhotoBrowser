@@ -1,7 +1,7 @@
 #YPKit.podspec
 Pod::Spec.new do |s|
 s.name         = "YPPhotoBrowser"
-s.version      = "1.0.1"
+s.version      = "1.0.2"
 s.summary      = "图片浏览器."
 
 s.homepage     = "https://github.com/yuping1989/YPPhotoBrowser"
@@ -11,7 +11,7 @@ s.platform     = :ios, "7.0"
 s.ios.deployment_target = "7.0"
 s.source       = { :git => "https://github.com/yuping1989/YPPhotoBrowser.git", :tag => s.version}
 s.source_files = 'YPPhotoBrowser/YPPhotoBrowser/**/*.{h,m}'
-s.resources    = 'YBImageBrowser/YBImageBrowser/YBImageBrowser.bundle'
+s.resources    = 'YPPhotoBrowser/YPPhotoBrowser/YPPhotoBrowser.bundle'
 s.requires_arc = true
 
 s.dependency 'SDWebImage'

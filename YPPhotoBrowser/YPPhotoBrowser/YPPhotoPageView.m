@@ -37,6 +37,10 @@ static NSString * const kContentOffset = @"contentOffset";
     return self;
 }
 
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 - (void)_setup {
     _visibleCells = [[NSMutableSet alloc] init];
     _reusableCells = [[NSMutableSet alloc] init];
@@ -78,10 +82,12 @@ static NSString * const kContentOffset = @"contentOffset";
     _pageIndicatorLabel.hidden = YES;
     _moreButtonHidden = NO;
     _moreButton.hidden = YES;
+    _captionHidden = YES;
     
     [self updateToolViewFrame];
     
-    _displayingIndex = NSNotFound;
+    _displayingIndex = 0;
+    _numberOfPhotos = NSNotFound;
     
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(photoViewCellSingleTapped)
@@ -96,7 +102,9 @@ static NSString * const kContentOffset = @"contentOffset";
     } else {
         _displayingIndex = displayingIndex;
     }
-    [self setContentOffsetToDisplayingIndex];
+    if (self.numberOfPhotos != NSNotFound) {
+        [self moveContentOffsetToIndex:_displayingIndex];
+    }
 }
 
 - (void)layoutSubviews {
@@ -107,12 +115,13 @@ static NSString * const kContentOffset = @"contentOffset";
     self.photoScrollView.contentSize = size;
     
     // 定位到当前的displayingIndex所在位置
-    [self setContentOffsetToDisplayingIndex];
+    CGRect cellFrame = [self frameForCellAtIndex:self.displayingIndex];
+    [self.photoScrollView setContentOffset:CGPointMake(cellFrame.origin.x - YPPhotoPageViewPadding, 0)];
     
     // 更新visibleCells的frame和缩放比例
     for (YPPhotoViewCell *cell in self.visibleCells) {
         cell.frame = [self frameForCellAtIndex:cell.index];
-        [cell.photoView setMaxMinZoomScalesForCurrentBounds];
+        [cell.photoView updateZoomScaleForCurrentBounds];
     }
     
     [self updateToolViewFrame];
@@ -192,7 +201,7 @@ static NSString * const kContentOffset = @"contentOffset";
     
     if (self.numberOfPhotos == 0) {
         // 图片数量为0
-        _displayingIndex = NSNotFound;
+        _displayingIndex = 0;
         [self updatePageIndicator];
         return;
     }
@@ -200,14 +209,14 @@ static NSString * const kContentOffset = @"contentOffset";
     if (self.displayingIndex > self.numberOfPhotos - 1) {
         _displayingIndex = self.numberOfPhotos - 1;
     }
-    [self setContentOffsetToDisplayingIndex];
-    [self updateSubviews];
+    [self moveContentOffsetToIndex:_displayingIndex];
     [self updateToolViewFrame];
 }
 
 - (YPPhotoViewCell *)dequeueReusableCell {
     YPPhotoViewCell *cell = [self.reusableCells anyObject];
     if (cell) {
+        cell.frame = self.bounds;
         [self.reusableCells removeObject:cell];
     }
     return cell;
@@ -235,13 +244,16 @@ static NSString * const kContentOffset = @"contentOffset";
 }
 
 // 定位到当前显示的图片
-- (void)setContentOffsetToDisplayingIndex {
-    CGRect cellFrame = [self frameForCellAtIndex:self.displayingIndex];
+- (void)moveContentOffsetToIndex:(NSUInteger)index {
+    CGRect cellFrame = [self frameForCellAtIndex:index];
     [self.photoScrollView setContentOffset:CGPointMake(cellFrame.origin.x - YPPhotoPageViewPadding, 0)];
-}
-
-- (void)dealloc {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    
+    [self layoutCells];
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:displayingCell:forPhotoAtIndex:)]) {
+        [self.delegate photoPageView:self displayingCell:self.displayingCell forPhotoAtIndex:index];
+    }
+    [self updatePageIndicator];
 }
 
 #pragma mark - Tool View
@@ -313,10 +325,6 @@ static NSString * const kContentOffset = @"contentOffset";
     if (self.numberOfPhotos == 0) {
         return;
     }
-    [self updateSubviews];
-}
-
-- (void)updateSubviews {
     [self layoutCells];
     
     // 计算当前应显示的index

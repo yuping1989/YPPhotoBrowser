@@ -67,6 +67,7 @@ static const int browser_key;
         _transitionAnimationImageContentMode = UIViewContentModeScaleAspectFill;
         _animationDuration = 0.3f;
         _displayingIndex = 0;
+        _captionHidden = YES;
         
         NSNumber *isVCBasedStatusBarAppearanceNum = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIViewControllerBasedStatusBarAppearance"];
         if (isVCBasedStatusBarAppearanceNum) {
@@ -89,10 +90,12 @@ static const int browser_key;
     self.photoPageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.photoPageView.dataSource = self;
     self.photoPageView.delegate = self;
-    self.photoPageView.backgroundColor = [UIColor clearColor];
     [self.view addSubview:self.photoPageView];
 
     self.photoPageView.displayingIndex = self.displayingIndex;
+    self.photoPageView.moreButtonHidden = self.moreButtonHidden;
+    self.photoPageView.pageIndicatorHidden = self.pageIndicatorHidden;
+    self.photoPageView.captionHidden = self.captionHidden;
     
     // 当转场模式为YPPhotoBrowserAnimationTransition时，需等到转场动画完成后，再调用以下代码
     if (self.animationStyle != YPPhotoBrowserAnimationTransition) {
@@ -275,8 +278,6 @@ static const int browser_key;
     } else {
         completion(YES);
     }
-    
-    
 }
 
 - (CGRect)centerFrameForSize:(CGSize)size {
@@ -304,7 +305,9 @@ static const int browser_key;
  */
 - (void)photoLoadingDidEnd:(NSNotification *)notification {
     dispatch_async(dispatch_get_main_queue(), ^{
-        NSUInteger index = [self.photos indexOfObject:notification.object];
+        NSDictionary *data = (NSDictionary *)notification.object;
+        id<YPPhoto> photo = data[@"photo"];
+        NSInteger index = [self.photos indexOfObject:photo];
         if ([self.photoPageView isCellDisplayingForIndex:index]) {
             [self loadAdjacentPhotosForIndex:index];
         }
@@ -342,12 +345,14 @@ static const int browser_key;
     }
     YPPhoto *photo = self.photos[index];
     cell.photo = photo;
-    if (photo.attributedCaption) {
-        cell.attributedCaption = photo.attributedCaption;
-        cell.captionViewHidden = _isCaptionViewHidden;
-    } else if (photo.caption) {
-        cell.caption = photo.caption;
-        cell.captionViewHidden = _isCaptionViewHidden;
+    if (!self.captionHidden) {
+        if (photo.attributedCaption) {
+            cell.attributedCaption = photo.attributedCaption;
+            cell.captionViewHidden = _isCaptionViewHidden;
+        } else if (photo.caption) {
+            cell.caption = photo.caption;
+            cell.captionViewHidden = _isCaptionViewHidden;
+        }
     }
     return cell;
 }

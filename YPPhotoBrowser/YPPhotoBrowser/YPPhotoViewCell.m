@@ -147,10 +147,9 @@ static CGFloat YPPhotoViewCellCaptionViewPadding = 10.0f;
         id<YPPhoto> photo = notification.object[@"photo"];
         if (photo == self.photo) {
             CGFloat progress = [notification.object[@"progress"] floatValue];
-            [self.photoView.progressView setProgress:progress animated:YES];
+            self.photoView.progressView.progress = progress;
             NSString *progrssStr = [NSString stringWithFormat:@"%ld%%", (long)(progress * 100)];
             self.photoView.progressView.progressLabel.text = progrssStr;
-            NSLog(@"progress--->%@", progrssStr);
         }
     });
 }

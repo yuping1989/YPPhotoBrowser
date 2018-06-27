@@ -8,6 +8,7 @@
 //  此类的作用于UITableView类似
 
 #import <UIKit/UIKit.h>
+#import "YPPhotoProtocol.h"
 
 static const CGFloat YPPhotoPageViewPadding = 10.0f;
 
@@ -24,15 +25,9 @@ static const CGFloat YPPhotoPageViewPadding = 10.0f;
 @protocol YPPhotoPageViewDelegate <NSObject>
 
 @optional
-- (void)photoPageView:(YPPhotoPageView *)pageView
-      willDisplayCell:(YPPhotoViewCell *)cell
-      forPhotoAtIndex:(NSUInteger)index;
-- (void)photoPageView:(YPPhotoPageView *)pageView
-       displayingCell:(YPPhotoViewCell *)cell
-      forPhotoAtIndex:(NSUInteger)index;
-- (void)photoPageView:(YPPhotoPageView *)pageView
- didEndDisplayingCell:(YPPhotoViewCell *)cell
-      forPhotoAtIndex:(NSUInteger)index;
+- (void)photoPageView:(YPPhotoPageView *)pageView willDisplayCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+- (void)photoPageView:(YPPhotoPageView *)pageView displayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+- (void)photoPageView:(YPPhotoPageView *)pageView didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 
 - (void)photoPageView:(YPPhotoPageView *)pageView didClickCellAtIndex:(NSUInteger)index;
 - (void)photoPageViewDidClickMoreButton:(YPPhotoPageView *)pageView;
