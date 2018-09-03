@@ -1,7 +1,7 @@
 #YPKit.podspec
 Pod::Spec.new do |s|
 s.name         = "YPPhotoBrowser"
-s.version      = "1.0.2"
+s.version      = "1.0.3"
 s.summary      = "图片浏览器."
 
 s.homepage     = "https://github.com/yuping1989/YPPhotoBrowser"
