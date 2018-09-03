@@ -38,7 +38,7 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
 
 - (void)_setup {
     
-    _photoImageView = [[UIImageView alloc] initWithFrame:CGRectZero];
+    _photoImageView = [[FLAnimatedImageView alloc] initWithFrame:CGRectZero];
     _photoImageView.backgroundColor = [UIColor clearColor];
     [self addSubview:_photoImageView];
     
@@ -91,14 +91,14 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
     
     // 水平方向
     if (frameToCenter.size.width < boundsSize.width) {
-        frameToCenter.origin.x = floorf((boundsSize.width - frameToCenter.size.width) / 2.0);
+        frameToCenter.origin.x = floorf((boundsSize.width - frameToCenter.size.width) / 2);
     } else {
         frameToCenter.origin.x = 0;
     }
     
     // 竖直方向
     if (frameToCenter.size.height < boundsSize.height) {
-        frameToCenter.origin.y = floorf((boundsSize.height - frameToCenter.size.height) / 2.0);
+        frameToCenter.origin.y = floorf((boundsSize.height - frameToCenter.size.height) / 2);
     } else {
         frameToCenter.origin.y = 0;
     }
@@ -110,13 +110,19 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
 /**
  *  显示image对象
  */
-- (void)displayImage:(UIImage *)image animatied:(BOOL)animatied {
-    self.photoImageView.image = image;
+- (void)displayImage:(id)image animatied:(BOOL)animatied {
+    if ([image isKindOfClass:[UIImage class]]) {
+        self.photoImageView.image = image;
+    } else if ([image isKindOfClass:[FLAnimatedImage class]]) {
+        self.photoImageView.animatedImage = image;
+    } else {
+        self.photoImageView.image = nil;
+    }
     
     // 根据run loop判断是否有scroll view滚动的情况，如果有，则不显示动画
     if (animatied &&
         image &&
-        self.animationDuration > 0.0f &&
+        self.animationDuration > 0 &&
         [[NSRunLoop mainRunLoop].currentMode isEqualToString:NSDefaultRunLoopMode]) {
         
         [UIView animateWithDuration:self.animationDuration
@@ -134,24 +140,13 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
  *  将图片移到容器中央并匹配其宽高
  */
 - (void)moveImageViewToCenterAndFix {
-    CGSize boundsSize = self.bounds.size;
     CGSize imageSize = self.photoImageView.image.size;
+    CGFloat scale = [self scaleWithImageSize:imageSize];
     
-    CGFloat width = imageSize.width;
-    CGFloat height = imageSize.height;
-    
-    if (imageSize.width > 0.0f && imageSize.height > 0.0f) {
-        // 当图片的宽高均大于0时，计算缩放比例
-        CGFloat xScale = boundsSize.width / imageSize.width;
-        CGFloat yScale = boundsSize.height / imageSize.height;
-        if (xScale < 1.0f || yScale < 1.0f) {
-            CGFloat minScale = MIN(xScale, yScale);
-            width = imageSize.width * minScale;
-            height = imageSize.height * minScale;
-        }
-    }
-    CGFloat x = floorf((boundsSize.width - width) / 2.0f);
-    CGFloat y = floorf((boundsSize.height - height) / 2.0f);
+    CGFloat width = imageSize.width * scale;
+    CGFloat height = imageSize.height * scale;
+    CGFloat x = (self.bounds.size.width - width) / 2;
+    CGFloat y = (self.bounds.size.height - height) / 2;
     self.photoImageView.frame = CGRectMake(x, y, width, height);
 }
 
@@ -166,7 +161,12 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
         return;
     }
     // 初始化photoImageView的size
-    self.photoImageView.frame = CGRectMake(0, 0, self.photoImageView.image.size.width, self.photoImageView.image.size.height);
+    CGFloat x = (self.bounds.size.width - self.photoImageView.image.size.width) / 2;
+    CGFloat y = (self.bounds.size.height - self.photoImageView.image.size.height) / 2;
+    self.photoImageView.frame = CGRectMake(x,
+                                           y,
+                                           self.photoImageView.image.size.width,
+                                           self.photoImageView.image.size.height);
     
     [self updateZoomScaleForCurrentBounds];
 }
@@ -179,27 +179,47 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
         maxScale = 4;
     }
     
-    CGSize boundsSize = self.bounds.size;
-    CGSize imageSize = self.photoImageView.image.size;
-    // 计算最小缩放比例
-    CGFloat xScale = boundsSize.width / imageSize.width;
-    CGFloat yScale = boundsSize.height / imageSize.height;
-    CGFloat minScale = MIN(xScale, yScale);
-    // 如果图像比屏幕更小，不缩放
-    if (xScale >= 1 && yScale >= 1) {
-        minScale = 1.0;
-    }
-    
+    CGFloat scale = [self scaleWithImageSize:self.photoImageView.image.size];
+    CGFloat minScale = MIN(scale, 1);
     self.maximumZoomScale = maxScale;
     self.minimumZoomScale = minScale;
     
     // 初始化缩放比例
-    self.zoomScale = minScale;
-    self.scrollEnabled = NO;
+    self.zoomScale = scale;
+    if (self.contentSize.width > self.bounds.size.width) {
+        self.scrollEnabled = NO;
+    }
+    
+    if (self.bounds.size.width < self.contentSize.width ||
+        self.bounds.size.height < self.contentSize.height) {
+        CGFloat x = (self.contentSize.width - self.bounds.size.width) / 2;
+        CGFloat y = (self.contentSize.height - self.bounds.size.height) / 2;
+        self.contentOffset = CGPointMake(x, y);
+    }
+}
+
+- (CGFloat)scaleWithImageSize:(CGSize)imageSize {
+    CGSize boundsSize = self.bounds.size;
+    // 计算最小缩放比例
+    CGFloat xScale = boundsSize.width / imageSize.width;
+    CGFloat yScale = boundsSize.height / imageSize.height;
+    CGFloat scale;
+    if (self.photoContentMode == YPPhotoContentModeScaleFill) {
+        if (imageSize.width < imageSize.height) {
+            scale = yScale;
+        } else {
+            scale = xScale;
+        }
+    } else if (self.photoContentMode == YPPhotoContentModeScaleFillHeight) {
+        scale = yScale;
+    } else {
+        scale = MIN(xScale, yScale);
+        scale = MIN(scale, 1);
+    }
+    return scale;
 }
 
 #pragma mark - UIScrollViewDelegate
-
 - (void)scrollViewWillBeginZooming:(UIScrollView *)scrollView withView:(UIView *)view {
     // 设置为支持滚动
     self.scrollEnabled = YES;
@@ -224,11 +244,16 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
     CGPoint touchPoint = [recognizer locationInView:self.photoImageView];
     if (self.zoomScale != self.minimumZoomScale) {
         // 恢复初始缩放比例
-        [self setZoomScale:self.minimumZoomScale animated:YES];
+        if (self.minimumZoomScale >= 1) {
+            [self setZoomScale:1 animated:YES];
+        } else {
+            [self setZoomScale:self.minimumZoomScale animated:YES];
+        }
     } else {
         // 放大以显示双击的位置
-        CGFloat xsize = self.bounds.size.width;
-        CGFloat ysize = self.bounds.size.height;
+        CGFloat newZoomScale = (self.maximumZoomScale + self.minimumZoomScale) / 2;
+        CGFloat xsize = self.bounds.size.width / newZoomScale;
+        CGFloat ysize = self.bounds.size.height / newZoomScale;
         [self zoomToRect:CGRectMake(touchPoint.x - xsize / 2, touchPoint.y - ysize / 2, xsize, ysize) animated:YES];
     }
 }

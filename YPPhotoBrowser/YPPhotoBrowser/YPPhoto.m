@@ -9,6 +9,10 @@
 #import "YPPhoto.h"
 #import <SDWebImage/SDWebImageOperation.h>
 #import <SDWebImage/SDWebImageManager.h>
+#import "YPPhotoUtil.h"
+#import <Photos/PHPhotoLibrary.h>
+#import <Photos/PHAssetCreationRequest.h>
+
 
 @interface YPPhoto () {
     id <SDWebImageOperation> _webImageOperation;
@@ -23,11 +27,15 @@
 @synthesize attributedCaption;
 
 #pragma mark - YPPhotoProtocol
-- (UIImage *)displayImage {
+- (id)displayImage {
     if (self.imageURL) {
-        return [self imageFromCache];
+        return [self scaledImageByScreenScale:[[SDImageCache sharedImageCache] imageFromCacheForKey:self.imageURL.absoluteString]];
     } else if (self.localPath) {
-        return [UIImage imageWithContentsOfFile:self.localPath];
+        if ([YPPhotoUtil isGifWithPath:self.localPath]) {
+            return [FLAnimatedImage animatedImageWithGIFData:[NSData dataWithContentsOfFile:self.localPath]];
+        } else {
+            return [self scaledImageByScreenScale:[UIImage imageWithContentsOfFile:self.localPath]];
+        }
     } else if (self.imageName) {
         return [UIImage imageNamed:self.imageName];
     } else if (self.image) {
@@ -35,7 +43,41 @@
     }
     return nil;
 }
-
+/*
+- (void)loadDisplayImageWithCompletion:(void (^)(UIImage *))completion {
+    if (!completion) {
+        return;
+    }
+    if (self.imageURL) {
+        [[SDImageCache sharedImageCache] queryCacheOperationForKey:self.imageURL.absoluteString done:^(UIImage * _Nullable image, NSData * _Nullable data, SDImageCacheType cacheType) {
+            if (image) {
+                image = [self scaledImageByScreenScale:image];
+                completion(image);
+            } else {
+                completion(nil);
+            }
+        }];
+    } else if (self.localPath) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            UIImage *image = [UIImage imageWithContentsOfFile:self.localPath];
+            if (image) {
+                image = [self scaledImageByScreenScale:image];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(image);
+                });
+            } else {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    completion(nil);
+                });
+            }
+        });
+    } else if (self.imageName) {
+        completion([UIImage imageNamed:self.imageName]);
+    } else if (self.image) {
+        completion(self.image);
+    }
+}
+*/
 - (UIImage *)thumbnailImage {
     return [self scaledImageByScreenScale:[[SDImageCache sharedImageCache] imageFromCacheForKey:self.thumbnailURL.absoluteString]];
 }
@@ -83,9 +125,24 @@
 
 - (void)saveImageToAlbumWithCompletionBlock:(void (^)(NSError *error))completion {
     self.savePhotoComletionBlock = completion;
-    UIImage *image = [self imageFromCache];
+    id image = [self displayImage];
     if (image) {
-        UIImageWriteToSavedPhotosAlbum(image, self, @selector(image:didFinishSavingWithError:contextInfo:), NULL);
+        if ([image isKindOfClass:[UIImage class]]) {
+            UIImageWriteToSavedPhotosAlbum(image, self, @selector(image:didFinishSavingWithError:contextInfo:), NULL);
+        } else if ([image isKindOfClass:[FLAnimatedImage class]]) {
+            [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+                [[PHAssetCreationRequest creationRequestForAsset] addResourceWithType:PHAssetResourceTypePhoto data:[image data] options:nil];
+            } completionHandler:^(BOOL success, NSError * _Nullable error) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (self.savePhotoComletionBlock) {
+                        self.savePhotoComletionBlock(error);
+                        return;
+                    }
+                    [self showAlertViewWithTitle:error ? @"图片保存失败" : @"图片保存成功"];
+                });
+            }];
+        }
+        
     } else {
         [self showAlertViewWithTitle:@"图片正在下载或下载失败"];
     }
@@ -96,14 +153,7 @@
         self.savePhotoComletionBlock(error);
         return;
     }
-    
-    NSString *msg = nil ;
-    if (error) {
-        msg = @"图片保存失败";
-    } else {
-        msg = @"图片保存成功";
-    }
-    [self showAlertViewWithTitle:msg];
+    [self showAlertViewWithTitle:error ? @"图片保存失败" : @"图片保存成功"];
 }
 
 

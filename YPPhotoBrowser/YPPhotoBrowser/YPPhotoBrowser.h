@@ -9,6 +9,27 @@
 #import <UIKit/UIKit.h>
 #import "YPPhoto.h"
 #import "YPPhotoPageView.h"
+#import "YPPhotoZoomingView.h"
+
+@class YPPhotoBrowser;
+
+@protocol YPPhotoBrowserDelegate <NSObject>
+
+@optional
+- (NSUInteger)numberOfPhotos:(YPPhotoBrowser *)browser;
+- (YPPhotoViewCell *)photoBrowser:(YPPhotoBrowser *)browser cellForPhotoAtIndex:(NSUInteger)index;
+
+- (void)photoBrowser:(YPPhotoBrowser *)browser willDisplayCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+- (void)photoBrowser:(YPPhotoBrowser *)browser displayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+- (void)photoBrowser:(YPPhotoBrowser *)browser didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+- (void)photoBrowser:(YPPhotoBrowser *)browser didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+
+- (void)photoBrowser:(YPPhotoBrowser *)browser didClickCellAtIndex:(NSUInteger)index;
+- (void)photoBrowserDidClickMoreButton:(YPPhotoBrowser *)browser;
+
+- (UIImageView *)photoBrowser:(YPPhotoBrowser *)browser animationImageViewForPhotoAtIndex:(NSUInteger)index;
+
+@end
 
 typedef NS_ENUM(NSInteger, YPPhotoBrowserAnimation) {
     YPPhotoBrowserAnimationNone,
@@ -17,6 +38,8 @@ typedef NS_ENUM(NSInteger, YPPhotoBrowserAnimation) {
 };
 
 @interface YPPhotoBrowser : UIViewController <YPPhotoPageViewDataSource, YPPhotoPageViewDelegate>
+
+@property (nonatomic, weak) id<YPPhotoBrowserDelegate> delegate;
 
 @property (nonatomic, strong) YPPhotoPageView *photoPageView;
 
@@ -30,6 +53,8 @@ typedef NS_ENUM(NSInteger, YPPhotoBrowserAnimation) {
 
 // 隐藏照片描述
 @property (nonatomic, assign) BOOL captionHidden;
+
+@property (nonatomic, assign) YPPhotoContentMode photoContentMode;
 
 // 转场动画模式，默认为YPPhotoBrowserAnimationNone
 @property (nonatomic, assign) YPPhotoBrowserAnimation animationStyle;

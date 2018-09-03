@@ -18,7 +18,7 @@ static NSString * const YPPhotoProgressNotification = @"YPPhotoProgressNotificat
  展示时会优先检查此方法是否返回图像，如果为nil，则使用thumbnailImage方法获取缩略图，
  同时调用startDownloadImageAndNotify方法开始下载图像
  */
-- (UIImage *)displayImage;
+- (id)displayImage;
 
 @optional
 

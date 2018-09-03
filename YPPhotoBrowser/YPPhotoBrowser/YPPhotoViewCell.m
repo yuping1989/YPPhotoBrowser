@@ -104,7 +104,7 @@ static CGFloat YPPhotoViewCellCaptionViewPadding = 10.0f;
  *  显示photo的图像
  */
 - (void)displayPhotoImageWithAnimated:(BOOL)animated {
-    UIImage *image = [self.photo displayImage];
+    id image = [self.photo displayImage];
     if (image) {
         self.photoView.progressView.hidden = YES;
         [self.photoView displayImage:image animatied:animated];

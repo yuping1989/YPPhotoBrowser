@@ -201,12 +201,21 @@ static const int browser_key;
     if (self.animationStyle == YPPhotoBrowserAnimationTransition) {
         YPPhoto *photo = self.photos[self.displayingIndex];
         UIImage *image = [photo displayImage];
+        if ([image isKindOfClass:[FLAnimatedImage class]]) {
+            image = [(FLAnimatedImage *)image posterImage];
+        }
         if (!image) {
             image = [photo thumbnailImage];
         }
         self.animationImageView = [[UIImageView alloc] initWithImage:image];
         self.animationImageView.contentMode = self.transitionAnimationImageContentMode;
-        self.animationImageView.frame = photo.originFrame;
+        CGRect frame = CGRectZero;
+        if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:animationImageViewForPhotoAtIndex:)]) {
+            UIImageView *imageView = [self.delegate photoBrowser:self animationImageViewForPhotoAtIndex:self.displayingIndex];
+            frame = [imageView convertRect:imageView.bounds toView:nil];
+        }
+        self.animationImageView.frame = frame;
+        
         self.animationImageView.clipsToBounds = YES;
         [self.view addSubview:self.animationImageView];
         self.view.backgroundColor = [UIColor clearColor];
@@ -240,11 +249,27 @@ static const int browser_key;
     };
     UIView *statusBar = [[[UIApplication sharedApplication] valueForKey:@"statusBarWindow"] valueForKey:@"statusBar"];
     if (self.animationStyle == YPPhotoBrowserAnimationTransition) {
-        if (!CGRectEqualToRect(photo.originFrame, CGRectZero)) {
+        CGRect endFrame = CGRectZero;
+        if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:animationImageViewForPhotoAtIndex:)]) {
+            UIImageView *imageView = [self.delegate photoBrowser:self animationImageViewForPhotoAtIndex:self.displayingIndex];
+            endFrame = [imageView convertRect:imageView.bounds toView:nil];
+        }
+        if (CGRectEqualToRect(endFrame, CGRectZero)) {
+            [UIView animateWithDuration:self.animationDuration
+                             animations:^{
+                                 self.view.transform = CGAffineTransformMakeScale(1.2f, 1.2f);
+                                 self.view.alpha = 0;
+                                 statusBar.alpha = 1;
+                             }
+                             completion:completion];
+        } else {
             YPPhotoViewCell *cell = [self.photoPageView displayingCell];
-            CGRect frame = [cell.photoView.photoImageView convertRect:cell.photoView.photoImageView.bounds toView:nil];
-            self.animationImageView.frame = frame;
+            CGRect beginFrame = [cell.photoView.photoImageView convertRect:cell.photoView.photoImageView.bounds toView:nil];
+            self.animationImageView.frame = beginFrame;
             UIImage *image = [photo displayImage];
+            if ([image isKindOfClass:[FLAnimatedImage class]]) {
+                image = [(FLAnimatedImage *)image posterImage];
+            }
             if (!image) {
                 image = [photo thumbnailImage];
             }
@@ -254,16 +279,8 @@ static const int browser_key;
             
             [UIView animateWithDuration:self.animationDuration
                              animations:^{
-                                 self.animationImageView.frame = photo.originFrame;
+                                 self.animationImageView.frame = endFrame;
                                  self.view.backgroundColor = [UIColor clearColor];
-                                 statusBar.alpha = 1;
-                             }
-                             completion:completion];
-        } else {
-            [UIView animateWithDuration:self.animationDuration
-                             animations:^{
-                                 self.view.transform = CGAffineTransformMakeScale(1.2f, 1.2f);
-                                 self.view.alpha = 0;
                                  statusBar.alpha = 1;
                              }
                              completion:completion];
@@ -283,16 +300,23 @@ static const int browser_key;
 - (CGRect)centerFrameForSize:(CGSize)size {
     CGSize boundsSize = self.view.bounds.size;
     
-    CGFloat width = size.width;
-    CGFloat height = size.height;
-    
     CGFloat xScale = boundsSize.width / size.width;
     CGFloat yScale = boundsSize.height / size.height;
-    if (xScale < 1.0f || yScale < 1.0f) {
-        CGFloat minScale = MIN(xScale, yScale);
-        width = size.width * minScale;
-        height = size.height * minScale;
+    CGFloat scale;
+    if (self.photoContentMode == YPPhotoContentModeScaleFill) {
+        if (size.width < size.height) {
+            scale = yScale;
+        } else {
+            scale = xScale;
+        }
+    } else if (self.photoContentMode == YPPhotoContentModeScaleFillHeight) {
+        scale = yScale;
+    } else {
+        scale = MIN(xScale, yScale);
+        scale = MIN(scale, 1);
     }
+    CGFloat width = size.width * scale;
+    CGFloat height = size.height * scale;
     CGFloat x = floorf((boundsSize.width - width) / 2.0);
     CGFloat y = floorf((boundsSize.height - height) / 2.0);
     return CGRectMake(x, y, width, height);
@@ -335,50 +359,94 @@ static const int browser_key;
 #pragma mark - YPPhotoPageViewDataSource
 
 - (NSUInteger)numberOfPhotos:(YPPhotoPageView *)pageView {
-    return self.photos.count;
+    if (self.photos) {
+        return self.photos.count;
+    } else {
+        if (self.delegate) {
+            return [self.delegate numberOfPhotos:self];
+        }
+    }
+    return 0;
 }
 
 - (YPPhotoViewCell *)photoPageView:(YPPhotoPageView *)pageView cellForPhotoAtIndex:(NSUInteger)index {
-    YPPhotoViewCell *cell = [self.photoPageView dequeueReusableCell];
-    if (!cell) {
-        cell = [[YPPhotoViewCell alloc] initWithFrame:self.view.bounds];
-    }
-    YPPhoto *photo = self.photos[index];
-    cell.photo = photo;
-    if (!self.captionHidden) {
-        if (photo.attributedCaption) {
-            cell.attributedCaption = photo.attributedCaption;
-            cell.captionViewHidden = _isCaptionViewHidden;
-        } else if (photo.caption) {
-            cell.caption = photo.caption;
-            cell.captionViewHidden = _isCaptionViewHidden;
+    if (self.photos) {
+        YPPhotoViewCell *cell = [self.photoPageView dequeueReusableCell];
+        if (!cell) {
+            cell = [[YPPhotoViewCell alloc] initWithFrame:self.view.bounds];
+        }
+        cell.photoView.photoContentMode = self.photoContentMode;
+        
+        YPPhoto *photo = self.photos[index];
+        cell.photo = photo;
+        if (!self.captionHidden) {
+            if (photo.attributedCaption) {
+                cell.attributedCaption = photo.attributedCaption;
+                cell.captionViewHidden = _isCaptionViewHidden;
+            } else if (photo.caption) {
+                cell.caption = photo.caption;
+                cell.captionViewHidden = _isCaptionViewHidden;
+            }
+        }
+        return cell;
+    } else {
+        if (self.delegate) {
+            return [self.delegate photoBrowser:self cellForPhotoAtIndex:index];
         }
     }
-    return cell;
+    return nil;
 }
 
 #pragma mark - YPPhotoPageViewDelegate
-- (void)photoPageView:(YPPhotoPageView *)pageView didClickCellAtIndex:(NSUInteger)index {
-    if (self.navigationController) {
-        [self.navigationController setNavigationBarHidden:!self.navigationController.navigationBarHidden animated:YES];
-
-        self.statusBarHidden = self.navigationController.navigationBarHidden;
-        
-        YPPhotoViewCell *cell = [self.photoPageView displayingCell];
-        _isCaptionViewHidden = !_isCaptionViewHidden;
-        [cell setCaptionViewHidden:_isCaptionViewHidden animated:YES];
-    } else {
-        [self dismissViewControllerAnimated:YES completion:nil];
-        [self hide];
+- (void)photoPageView:(YPPhotoPageView *)pageView willDisplayCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:willDisplayCell:forPhotoAtIndex:)]) {
+        [self.delegate photoBrowser:self willDisplayCell:cell forPhotoAtIndex:index];
     }
 }
 
 // 显示某个页面时的回调
-- (void)photoPageView:(YPPhotoPageView *)pageView didDisplayCellAtIndex:(NSUInteger)index {
+- (void)photoPageView:(YPPhotoPageView *)pageView displayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
     if (self.navigationController) {
         self.title = [NSString stringWithFormat:@"%lu / %lu", (unsigned long)index, (unsigned long)self.photos.count];
     }
+    _displayingIndex = index;
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:displayingCell:forPhotoAtIndex:)]) {
+        [self.delegate photoBrowser:self displayingCell:cell forPhotoAtIndex:index];
+    }
 }
+
+- (void)photoPageView:(YPPhotoPageView *)pageView didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
+        [self.delegate photoBrowser:self didEndDeceleratingOnCell:cell forPhotoAtIndex:index];
+    }
+}
+
+- (void)photoPageView:(YPPhotoPageView *)pageView didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDisplayingCell:forPhotoAtIndex:)]) {
+        [self.delegate photoBrowser:self didEndDisplayingCell:cell forPhotoAtIndex:index];
+    }
+}
+
+- (void)photoPageView:(YPPhotoPageView *)pageView didClickCellAtIndex:(NSUInteger)index {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:didClickCellAtIndex:)]) {
+        [self.delegate photoBrowser:self didClickCellAtIndex:index];
+    } else {
+        if (self.navigationController) {
+            [self.navigationController setNavigationBarHidden:!self.navigationController.navigationBarHidden animated:YES];
+            
+            self.statusBarHidden = self.navigationController.navigationBarHidden;
+            
+            YPPhotoViewCell *cell = [self.photoPageView displayingCell];
+            _isCaptionViewHidden = !_isCaptionViewHidden;
+            [cell setCaptionViewHidden:_isCaptionViewHidden animated:YES];
+        } else {
+            [self dismissViewControllerAnimated:YES completion:nil];
+            [self hide];
+        }
+    }
+}
+
+
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

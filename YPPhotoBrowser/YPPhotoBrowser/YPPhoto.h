@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import "YPPhotoProtocol.h"
+#import <FLAnimatedImage/FLAnimatedImage.h>
 
 @interface YPPhoto : NSObject <YPPhoto>
 

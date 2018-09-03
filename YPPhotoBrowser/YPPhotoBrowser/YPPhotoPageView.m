@@ -253,6 +253,9 @@ static NSString * const kContentOffset = @"contentOffset";
     if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:displayingCell:forPhotoAtIndex:)]) {
         [self.delegate photoPageView:self displayingCell:self.displayingCell forPhotoAtIndex:index];
     }
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
+        [self.delegate photoPageView:self didEndDeceleratingOnCell:self.displayingCell forPhotoAtIndex:self.displayingIndex];
+    }
     [self updatePageIndicator];
 }
 
@@ -276,11 +279,15 @@ static NSString * const kContentOffset = @"contentOffset";
 }
 
 - (void)updatePageIndicator {
-    if (!self.pageIndicatorHidden) {
-        NSInteger index = self.numberOfPhotos == 0 ? 0 : self.displayingIndex + 1;
-        NSString *text = [NSString stringWithFormat:@"%lu / %lu",  (unsigned long)index, (unsigned long)self.numberOfPhotos];
-        self.pageIndicatorLabel.text = text;
+    if (self.pageIndicatorHidden) {
+        return;
     }
+    if (self.numberOfPhotos == NSNotFound) {
+        return;
+    }
+    NSInteger index = self.numberOfPhotos == 0 ? 0 : self.displayingIndex + 1;
+    NSString *text = [NSString stringWithFormat:@"%lu / %lu",  (unsigned long)index, (unsigned long)self.numberOfPhotos];
+    self.pageIndicatorLabel.text = text;
 }
 
 - (void)setMoreButtonHidden:(BOOL)hidden {
@@ -340,6 +347,12 @@ static NSString * const kContentOffset = @"contentOffset";
             [self.delegate photoPageView:self displayingCell:self.displayingCell forPhotoAtIndex:index];
         }
         [self updatePageIndicator];
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
+        [self.delegate photoPageView:self didEndDeceleratingOnCell:self.displayingCell forPhotoAtIndex:self.displayingIndex];
     }
 }
 
