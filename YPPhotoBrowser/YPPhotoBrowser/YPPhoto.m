@@ -12,7 +12,7 @@
 #import "YPPhotoUtil.h"
 #import <Photos/PHPhotoLibrary.h>
 #import <Photos/PHAssetCreationRequest.h>
-
+#import <YPUIKit/YPToastView.h>
 
 @interface YPPhoto () {
     id <SDWebImageOperation> _webImageOperation;
@@ -28,7 +28,9 @@
 
 #pragma mark - YPPhotoProtocol
 - (id)displayImage {
-    if (self.imageURL) {
+    if (self.image) {
+        return self.image;
+    } else if (self.imageURL) {
         return [self scaledImageByScreenScale:[[SDImageCache sharedImageCache] imageFromCacheForKey:self.imageURL.absoluteString]];
     } else if (self.localPath) {
         if ([YPPhotoUtil isGifWithPath:self.localPath]) {
@@ -38,11 +40,39 @@
         }
     } else if (self.imageName) {
         return [UIImage imageNamed:self.imageName];
-    } else if (self.image) {
-        return self.image;
     }
     return nil;
 }
+
+- (void)preloadImage {
+    if (self.image) {
+        return;
+    }
+    [self async:^{
+        if (self.imageURL) {
+            self.image = [self scaledImageByScreenScale:[[SDImageCache sharedImageCache] imageFromCacheForKey:self.imageURL.absoluteString]];
+        } else if (self.localPath) {
+            if ([YPPhotoUtil isGifWithPath:self.localPath]) {
+                self.image = [FLAnimatedImage animatedImageWithGIFData:[NSData dataWithContentsOfFile:self.localPath]];
+            } else {
+                self.image = [self scaledImageByScreenScale:[UIImage imageWithContentsOfFile:self.localPath]];
+            }
+        } else if (self.imageName) {
+            self.image = [UIImage imageNamed:self.imageName];
+        }
+    }];
+}
+
+- (void)resetImage {
+    if (self.imageURL || self.localPath || self.imageName) {
+        self.image = nil;
+    }
+}
+
+- (void)async:(void (^)(void))block {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), block);
+}
+
 /*
 - (void)loadDisplayImageWithCompletion:(void (^)(UIImage *))completion {
     if (!completion) {
@@ -159,17 +189,7 @@
 
 
 - (void)showAlertViewWithTitle:(NSString *)title {
-    
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title
-                                                    message:nil
-                                                   delegate:self
-                                          cancelButtonTitle:@"确定"
-                                          otherButtonTitles:nil];
-    [alert show];
-#pragma clang diagnostic pop
-    
+    YPTextToast(title);
 }
 
 - (void)convertOriginFrameByView:(UIView *)view {

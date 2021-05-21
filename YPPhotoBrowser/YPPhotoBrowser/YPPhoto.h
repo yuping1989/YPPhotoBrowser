@@ -17,7 +17,7 @@
 @property (nonatomic, strong) NSURL *imageURL;
 @property (nonatomic, strong) NSString *localPath;
 @property (nonatomic, strong) NSString *imageName;
-@property (nonatomic, strong) UIImage *image;
+@property (nonatomic, strong) id image;
 
 @property (nonatomic, strong) NSURL *thumbnailURL;
 

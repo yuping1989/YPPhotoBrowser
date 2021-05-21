@@ -190,6 +190,19 @@ static const int browser_key;
     return UIStatusBarAnimationSlide;
 }
 
+- (UIView *)statusBar {
+    return nil;
+//    UIStatusBarManager *statusBarManager = [UIApplication sharedApplication].keyWindow.windowScene.statusBarManager;
+//    id bar = nil;
+//    if ([statusBarManager respondsToSelector:@selector(createLocalStatusBar)]) {
+//        UIView *localStatusBar = [statusBarManager performSelector:@selector(createLocalStatusBar)];
+//        if ([localStatusBar respondsToSelector:@selector(statusBar)]) {
+//            bar = [localStatusBar performSelector:@selector(statusBar)];
+//        }
+//    }
+//    return bar;
+}
+
 #pragma mark - Show
 
 - (void)show {
@@ -197,7 +210,7 @@ static const int browser_key;
     
     UIWindow *window = [[UIApplication sharedApplication].windows firstObject];
     [window addSubview:self.view];
-    UIView *statusBar = [[[UIApplication sharedApplication] valueForKey:@"statusBarWindow"] valueForKey:@"statusBar"];
+    UIView *statusBar = [self statusBar];
     if (self.animationStyle == YPPhotoBrowserAnimationTransition) {
         YPPhoto *photo = self.photos[self.displayingIndex];
         UIImage *image = [photo displayImage];
@@ -247,7 +260,7 @@ static const int browser_key;
         [self.view removeFromSuperview];
         objc_setAssociatedObject([UIApplication sharedApplication], &browser_key, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     };
-    UIView *statusBar = [[[UIApplication sharedApplication] valueForKey:@"statusBarWindow"] valueForKey:@"statusBar"];
+    UIView *statusBar = [self statusBar];
     if (self.animationStyle == YPPhotoBrowserAnimationTransition) {
         CGRect endFrame = CGRectZero;
         if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:animationImageViewForPhotoAtIndex:)]) {
@@ -416,6 +429,28 @@ static const int browser_key;
 }
 
 - (void)photoPageView:(YPPhotoPageView *)pageView didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
+    
+    NSInteger preIndex = index - 1;
+    if (preIndex > 0 && preIndex < self.photos.count - 1) {
+        YPPhoto *photo = self.photos[preIndex];
+        [photo preloadImage];
+    }
+    NSInteger nextIndex = index + 1;
+    if (nextIndex > 0 && nextIndex < self.photos.count - 1) {
+        YPPhoto *photo = self.photos[nextIndex];
+        [photo preloadImage];
+    }
+    preIndex = index - 2;
+    if (preIndex > 0 && preIndex < self.photos.count - 1) {
+        YPPhoto *photo = self.photos[preIndex];
+        [photo resetImage];
+    }
+    nextIndex = index + 2;
+    if (nextIndex > 0 && nextIndex < self.photos.count - 1) {
+        YPPhoto *photo = self.photos[nextIndex];
+        [photo resetImage];
+    }
+    
     if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
         [self.delegate photoBrowser:self didEndDeceleratingOnCell:cell forPhotoAtIndex:index];
     }
@@ -451,7 +486,9 @@ static const int browser_key;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)photoPageViewDidClickMoreButton:(YPPhotoPageView *)pageView {
-    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:nil delegate:self cancelButtonTitle:@"取消" destructiveButtonTitle:nil otherButtonTitles:@"保存到相册", nil];
+    YPPhoto *displayingPhoto = self.photos[self.displayingIndex];
+    UIImage *image = [displayingPhoto displayImage];
+    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:[NSString stringWithFormat:@"%.0f x %.0f", image.size.width, image.size.height] delegate:self cancelButtonTitle:@"取消" destructiveButtonTitle:nil otherButtonTitles:@"保存到相册", nil];
     [actionSheet showInView:self.view];
 }
 
