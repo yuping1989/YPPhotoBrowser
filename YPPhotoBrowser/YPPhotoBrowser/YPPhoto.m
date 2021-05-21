@@ -9,6 +9,7 @@
 #import "YPPhoto.h"
 #import <SDWebImage/SDWebImageOperation.h>
 #import <SDWebImage/SDWebImageManager.h>
+#import <SDWebImage/SDImageCache.h>
 #import "YPPhotoUtil.h"
 #import <Photos/PHPhotoLibrary.h>
 #import <Photos/PHAssetCreationRequest.h>
