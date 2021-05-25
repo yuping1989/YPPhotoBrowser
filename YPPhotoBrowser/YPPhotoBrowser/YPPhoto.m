@@ -184,7 +184,11 @@
         self.savePhotoComletionBlock(error);
         return;
     }
-    [self showAlertViewWithTitle:error ? @"图片保存失败" : @"图片保存成功"];
+    if (error) {
+        YPErrorToast(@"图片保存失败");
+    } else {
+        YPSuccessToast(@"图片保存成功");
+    }
 }
 
 
