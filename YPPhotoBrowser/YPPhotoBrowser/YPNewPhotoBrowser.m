@@ -23,8 +23,9 @@ static const int browser_key;
 
 @property (nonatomic, strong) UIImageView *animationImageView;
 
-@property (nonatomic, copy) NSArray *photos;
 @property (nonatomic, assign) BOOL statusBarHidden;
+
+@property (nonatomic, strong) NSMutableArray<YPPhoto *> *photos;
 
 @end
 
@@ -39,10 +40,10 @@ static const int browser_key;
                                                  selector:@selector(photoLoadingDidEnd:)
                                                      name:YPPhotoLoadingDidEndNotification
                                                    object:nil];
-        NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity:photos.count];
+        self.photos = [[NSMutableArray alloc] initWithCapacity:photos.count];
         for (id photo in photos) {
             if ([photo isKindOfClass:[YPPhoto class]]) {
-                [array addObject:photo];
+                [self.photos addObject:photo];
             } else {
                 NSString *string = photo;
                 YPPhoto *photoObj = [[YPPhoto alloc] init];
@@ -59,10 +60,9 @@ static const int browser_key;
                 } else if ([photo isKindOfClass:[UIImage class]]) {
                     photoObj.image = photo;
                 }
-                [array addObject:photoObj];
+                [self.photos addObject:photoObj];
             }
         }
-        self.photos = array;
         _animationStyle = YPNewPhotoBrowserAnimationNone;
         _transitionAnimationImageContentMode = UIViewContentModeScaleAspectFill;
         _animationDuration = 0.3f;
@@ -87,7 +87,6 @@ static const int browser_key;
     self.view.clipsToBounds = YES;
     
     self.photoPageView = [[YPNewPhotoPageView alloc] initWithFrame:self.view.bounds];
-    self.photoPageView.photos = self.photos;
     self.photoPageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.photoPageView.dataSource = self;
     self.photoPageView.delegate = self;
@@ -482,23 +481,40 @@ static const int browser_key;
     }
 }
 
+- (void)photoPageView:(id)pageView didLongPressAtIndex:(NSUInteger)index {
+    YPPhoto *photo = self.photos[index];
+    [UIAlertController showAlertWithTitle:[NSString stringWithFormat:@"确定删除“%@”?", photo.localPath.lastPathComponent] okButtonClicked:^{
+        if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:didDeleteCellAtIndex:)]) {
+            [self.delegate photoBrowser:self didDeleteCellAtIndex:index];
+        }
+        if (self.photos.count == 1) {
+            [self hide];
+        }
+        [self.photos removeObjectAtIndex:index];
+        [self.photoPageView deleteCellAtIndex:index animated:YES];
+    }];
+}
 
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)photoPageViewDidClickMoreButton:(YPNewPhotoPageView *)pageView {
-    YPPhoto *displayingPhoto = self.photos[self.displayingIndex];
-    UIImage *image = [displayingPhoto displayImage];
-    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:[NSString stringWithFormat:@"%.0f x %.0f", image.size.width, image.size.height] delegate:self cancelButtonTitle:@"取消" destructiveButtonTitle:nil otherButtonTitles:@"保存到相册", nil];
-    [actionSheet showInView:self.view];
+    YPPhoto *photo = self.photos[self.displayingIndex];
+    NSURL *url = [NSURL fileURLWithPath:photo.localPath];
+    UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:@[url] applicationActivities:nil];
+    activityVC.excludedActivityTypes = @[
+        UIActivityTypePostToFacebook,
+        UIActivityTypePostToTwitter,
+        UIActivityTypePostToWeibo,
+        UIActivityTypeMessage,
+        UIActivityTypeMail,
+        UIActivityTypePrint,
+        UIActivityTypeCopyToPasteboard,
+        UIActivityTypeAssignToContact,
+        UIActivityTypeAddToReadingList,
+        UIActivityTypePostToFlickr,
+        UIActivityTypePostToVimeo,
+        UIActivityTypePostToTencentWeibo,
+        UIActivityTypeOpenInIBooks
+    ];
+    [self presentViewController:activityVC animated:YES completion:nil];
 }
-
-- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
-    if (buttonIndex == 0) {
-        YPPhoto *displayingPhoto = self.photos[self.displayingIndex];
-        [displayingPhoto saveImageToAlbumWithCompletionBlock:nil];
-    }
-}
-#pragma clang diagnostic pop
 
 @end

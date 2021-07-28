@@ -13,6 +13,7 @@
 #import "YPPhotoProgressView.h"
 
 NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSingleTappedNotification";
+NSString * const YPPhotoViewCellLongPressedNotification =  @"YPPhotoViewCellLongPressedNotification";
 
 @interface YPPhotoZoomingView () <UIScrollViewDelegate>
 
@@ -58,6 +59,9 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
     
     [self addGestureRecognizer:singleTap];
     [self addGestureRecognizer:doubleTap];
+    
+    UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)];
+    [self addGestureRecognizer:longPress];
     
     _progressView = [[YPPhotoProgressView alloc] initWithFrame:CGRectMake(0, 0, 45, 45)];
     
@@ -236,8 +240,15 @@ NSString * const YPPhotoViewCellSingleTappedNotification =  @"YPPhotoViewCellSin
 
 #pragma mark - Handle tap gesture
 
-- (void)handleSingleTap:(UITapGestureRecognizer *)recognizer {
+- (void)handleSingleTap:(UITapGestureRecognizer *)gesture {
     [[NSNotificationCenter defaultCenter] postNotificationName:YPPhotoViewCellSingleTappedNotification object:nil];
+}
+
+- (void)handleLongPress:(UILongPressGestureRecognizer *)gesture {
+    if (gesture.state != UIGestureRecognizerStateBegan) {
+        return;
+    }
+    [[NSNotificationCenter defaultCenter] postNotificationName:YPPhotoViewCellLongPressedNotification object:nil];
 }
 
 - (void)handleDoubleTap:(UITapGestureRecognizer *)recognizer {

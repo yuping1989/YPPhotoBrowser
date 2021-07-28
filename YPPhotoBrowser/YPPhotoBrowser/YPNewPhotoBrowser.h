@@ -24,6 +24,8 @@
 - (void)photoBrowser:(YPNewPhotoBrowser *)browser didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 - (void)photoBrowser:(YPNewPhotoBrowser *)browser didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 
+- (void)photoBrowser:(YPNewPhotoBrowser *)browser didDeleteCellAtIndex:(NSUInteger)index;
+
 - (void)photoBrowser:(YPNewPhotoBrowser *)browser didClickCellAtIndex:(NSUInteger)index;
 - (void)photoBrowserDidClickMoreButton:(YPNewPhotoBrowser *)browser;
 
@@ -38,6 +40,8 @@ typedef NS_ENUM(NSInteger, YPNewPhotoBrowserAnimation) {
 };
 
 @interface YPNewPhotoBrowser : UIViewController <YPNewPhotoPageViewDataSource, YPNewPhotoPageViewDelegate>
+
+@property (nonatomic, strong, readonly) NSMutableArray<YPPhoto *> *photos;
 
 @property (nonatomic, weak) id<YPNewPhotoBrowserDelegate> delegate;
 

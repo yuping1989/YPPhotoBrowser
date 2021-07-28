@@ -31,6 +31,7 @@ static const CGFloat YPNewPhotoPageViewPadding = 10.0f;
 - (void)photoPageView:(YPNewPhotoPageView *)pageView didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 
 - (void)photoPageView:(YPNewPhotoPageView *)pageView didClickCellAtIndex:(NSUInteger)index;
+- (void)photoPageView:(YPNewPhotoPageView *)pageView didLongPressAtIndex:(NSUInteger)index;
 - (void)photoPageViewDidClickMoreButton:(YPNewPhotoPageView *)pageView;
 
 @end
@@ -46,8 +47,6 @@ static const CGFloat YPNewPhotoPageViewPadding = 10.0f;
 @property (nonatomic, weak) id<YPNewPhotoPageViewDataSource> dataSource;
 @property (nonatomic, weak) id<YPNewPhotoPageViewDelegate> delegate;
 
-@property (nonatomic, copy) NSArray<id<YPPhoto>> *photos;
-
 - (void)reloadPhotos;
 
 - (YPPhotoViewCell *)dequeueReusableCell;
@@ -58,5 +57,9 @@ static const CGFloat YPNewPhotoPageViewPadding = 10.0f;
 
 - (void)setMoreButtonHidden:(BOOL)hidden animated:(BOOL)animated;
 - (void)setPageIndicatorHidden:(BOOL)hidden animated:(BOOL)animated;
+
+- (void)setDisplayingIndex:(NSUInteger)displayingIndex animated:(BOOL)animated;
+
+- (void)deleteCellAtIndex:(NSUInteger)index animated:(BOOL)animated;
 
 @end

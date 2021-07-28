@@ -19,6 +19,7 @@ typedef NS_ENUM(NSInteger, YPPhotoContentMode) {
 @class YPPhotoProgressView;
 
 extern NSString * const YPPhotoViewCellSingleTappedNotification;
+extern NSString * const YPPhotoViewCellLongPressedNotification;
 
 @interface YPPhotoZoomingView : UIScrollView
 

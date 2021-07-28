@@ -89,13 +89,15 @@ static NSString * const kContentOffset = @"contentOffset";
     _displayingIndex = 0;
     _numberOfPhotos = NSNotFound;
     
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(photoViewCellSingleTapped)
-                                                 name:YPPhotoViewCellSingleTappedNotification
-                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(photoViewCellSingleTapped) name:YPPhotoViewCellSingleTappedNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(photoViewCellLongPressed) name:YPPhotoViewCellLongPressedNotification object:nil];
 }
 
 - (void)setDisplayingIndex:(NSUInteger)displayingIndex {
+    [self setDisplayingIndex:displayingIndex animated:NO];
+}
+
+- (void)setDisplayingIndex:(NSUInteger)displayingIndex animated:(BOOL)animated {
     NSUInteger maxIndex = self.numberOfPhotos - 1;
     if (displayingIndex > maxIndex) {
         _displayingIndex = maxIndex;
@@ -103,8 +105,20 @@ static NSString * const kContentOffset = @"contentOffset";
         _displayingIndex = displayingIndex;
     }
     if (self.numberOfPhotos != NSNotFound) {
-        [self moveContentOffsetToIndex:_displayingIndex];
+        [self moveContentOffsetToIndex:_displayingIndex animated:animated completed:nil];
     }
+}
+
+- (void)deleteCellAtIndex:(NSUInteger)index animated:(BOOL)animated {
+    NSUInteger targetIndex;
+    if (index == self.numberOfPhotos - 1) {
+        targetIndex = self.displayingIndex - 1;
+    } else {
+        targetIndex = self.displayingIndex + 1;
+    }
+    [self moveContentOffsetToIndex:targetIndex animated:animated completed:^{
+        [self reloadPhotos];
+    }];
 }
 
 - (void)layoutSubviews {
@@ -179,13 +193,15 @@ static NSString * const kContentOffset = @"contentOffset";
 - (void)reloadPhotos {
     self.numberOfPhotos = [self.dataSource numberOfPhotos:self];
     
+    for (YPPhotoViewCell *cell in self.visibleCells) {
+        [cell removeFromSuperview];
+        [cell prepareForReuse];
+        [self.reusableCells addObject:cell];
+    }
+    [self.visibleCells removeAllObjects];
+    
     self.photoScrollView.contentSize = CGSizeMake(self.photoScrollView.bounds.size.width * self.numberOfPhotos, self.photoScrollView.bounds.size.height);
     
-//    for (int i = 0; i < self.numberOfPhotos; i++) {
-//        YPPhotoViewCell *cell = [self.dataSource photoPageView:self cellForPhotoAtIndex:i];
-//        cell.frame = [self frameForCellAtIndex:i];
-//        [self.photoScrollView addSubview:cell];
-//    }
     [self loadCurrentCell];
     
     if (self.numberOfPhotos == 0) {
@@ -198,7 +214,7 @@ static NSString * const kContentOffset = @"contentOffset";
     if (self.displayingIndex > self.numberOfPhotos - 1) {
         _displayingIndex = self.numberOfPhotos - 1;
     }
-    [self moveContentOffsetToIndex:_displayingIndex];
+    [self moveContentOffsetToIndex:_displayingIndex animated:NO completed:nil];
     [self updateToolViewFrame];
 }
 
@@ -224,8 +240,12 @@ static NSString * const kContentOffset = @"contentOffset";
 }
 
 - (YPPhotoViewCell *)displayingCell {
+    return [self visibleCellForIndex:self.displayingIndex];
+}
+
+- (YPPhotoViewCell *)visibleCellForIndex:(NSUInteger)index {
     for (YPPhotoViewCell *cell in self.visibleCells) {
-        if (self.displayingIndex == cell.index) {
+        if (index == cell.index) {
             return cell;
         }
     }
@@ -233,37 +253,59 @@ static NSString * const kContentOffset = @"contentOffset";
 }
 
 // 定位到当前显示的图片
-- (void)moveContentOffsetToIndex:(NSUInteger)index {
+- (void)moveContentOffsetToIndex:(NSUInteger)index
+                        animated:(BOOL)animated
+                       completed:(void (^)(void))completed {
     CGRect cellFrame = [self frameForCellAtIndex:index];
-    [self.photoScrollView setContentOffset:CGPointMake(cellFrame.origin.x - YPNewPhotoPageViewPadding, 0)];
+    if (animated) {
+        [UIView animateWithDuration:0.25f animations:^{
+            [self.photoScrollView setContentOffset:CGPointMake(cellFrame.origin.x - YPNewPhotoPageViewPadding, 0)];
+        } completion:^(BOOL finished) {
+            if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:displayingCell:forPhotoAtIndex:)]) {
+                [self.delegate photoPageView:self displayingCell:[self visibleCellForIndex:index] forPhotoAtIndex:index];
+            }
+            if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
+                [self.delegate photoPageView:self didEndDeceleratingOnCell:[self visibleCellForIndex:index] forPhotoAtIndex:index];
+            }
+            [self updatePageIndicator];
+            if (completed) {
+                completed();
+            }
+        }];
+    } else {
+        [self.photoScrollView setContentOffset:CGPointMake(cellFrame.origin.x - YPNewPhotoPageViewPadding, 0)];
+        if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:displayingCell:forPhotoAtIndex:)]) {
+            [self.delegate photoPageView:self displayingCell:self.displayingCell forPhotoAtIndex:index];
+        }
+        if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
+            [self.delegate photoPageView:self didEndDeceleratingOnCell:self.displayingCell forPhotoAtIndex:self.displayingIndex];
+        }
+        [self updatePageIndicator];
+        if (completed) {
+            completed();
+        }
+    }
     
 //    [self layoutCells];
-    
-    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:displayingCell:forPhotoAtIndex:)]) {
-        [self.delegate photoPageView:self displayingCell:self.displayingCell forPhotoAtIndex:index];
-    }
-    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
-        [self.delegate photoPageView:self didEndDeceleratingOnCell:self.displayingCell forPhotoAtIndex:self.displayingIndex];
-    }
-    [self updatePageIndicator];
 }
 
 - (void)loadCurrentCell {
-    
     NSInteger firstIndex = self.displayingIndex - 1;
     NSInteger lastIndex = self.displayingIndex + 1;
     if (firstIndex < 0) {
         firstIndex = 0;
     }
-    if (lastIndex >= self.photos.count) {
-        lastIndex = self.photos.count - 1;
+    if (lastIndex >= self.numberOfPhotos) {
+        lastIndex = self.numberOfPhotos - 1;
     }
-    
     
     for (NSInteger i = firstIndex; i <= lastIndex; i++) {
         BOOL hasCell = NO;
-        for (YPPhotoViewCell *tmp in self.visibleCells) {
-            if (tmp.index == i) {
+        for (YPPhotoViewCell *cell in self.visibleCells) {
+            if (cell.index != self.displayingIndex) {
+                [cell.photoView updateZoomScaleForCurrentBounds];
+            }
+            if (cell.index == i) {
                 hasCell = YES;
                 break;
             }
@@ -284,6 +326,10 @@ static NSString * const kContentOffset = @"contentOffset";
         }
     }
     [self.visibleCells minusSet:self.reusableCells];
+    while (self.reusableCells.count > 2) {
+        // 只保留2个重用cell
+        [self.reusableCells removeObject:[self.reusableCells anyObject]];
+    }
 }
 
 #pragma mark - Tool View
@@ -392,6 +438,15 @@ static NSString * const kContentOffset = @"contentOffset";
 - (void)photoViewCellSingleTapped {
     if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didClickCellAtIndex:)]) {
         [self.delegate photoPageView:self didClickCellAtIndex:self.displayingIndex];
+    }
+}
+
+/**
+ *  cell被长按
+ */
+- (void)photoViewCellLongPressed {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didLongPressAtIndex:)]) {
+        [self.delegate photoPageView:self didLongPressAtIndex:self.displayingIndex];
     }
 }
 
