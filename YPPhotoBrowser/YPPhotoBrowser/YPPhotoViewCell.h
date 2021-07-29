@@ -21,30 +21,7 @@
 // 此属性用于记录当前cell的索引，不能在配置cell时手动设置
 @property (nonatomic, assign) NSUInteger index;
 
-// attributed标题
-@property (nonatomic, strong) NSAttributedString *attributedCaption;
-
-// 普通标题，captionColor和captionFont均为针对普通标题设置的属性
-@property (nonatomic, copy) NSString *caption;
-@property (nonatomic, strong) UIColor *captionColor;
-@property (nonatomic, strong) UIFont *captionFont;
-@property (nonatomic, assign, getter = isCptionViewHidden) BOOL captionViewHidden;
-
-// captionView是否展开
-@property (nonatomic, assign, getter = isCaptionOpened) BOOL captionOpened;
-
-// captionView展开时的最大高度
-@property (nonatomic, assign) CGFloat maxHeightOfCaptionWhenOpened;
-
-// captionView关闭时的最大高度
-@property (nonatomic, assign) CGFloat maxHeightOfCaptionWhenClosed;
-
-// 动画的时长，默认为0.3f
-@property (nonatomic, assign) CGFloat animationDuration;
-
 // 重置cell
 - (void)prepareForReuse;
-
-- (void)setCaptionViewHidden:(BOOL)hidden animated:(BOOL)animated;
 
 @end

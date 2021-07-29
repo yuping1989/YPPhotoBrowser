@@ -63,23 +63,6 @@ static CGFloat YPPhotoViewCellCaptionViewPadding = 10.0f;
     _photoView = [[YPPhotoZoomingView alloc] initWithFrame:self.bounds];
     _photoView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self addSubview:_photoView];
-    
-    _captionOpened = YES;
-    _captionFont = [UIFont systemFontOfSize:16];
-    _captionViewHidden = NO;
-    _maxHeightOfCaptionWhenOpened = self.bounds.size.height / 4;
-    _maxHeightOfCaptionWhenClosed = self.bounds.size.height / 10;
-    
-    _animationDuration = 0.3f;
-}
-
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    NSLog(@"layoutSubviews");
-    // 当非点击事件触发时，重新计算高度，比如设备旋转
-    if (!_updateCaptionViewFrameByTapped) {
-        [self calculateAndUpdateCaptionViewFrame];
-    }
 }
 
 - (void)prepareForReuse {
@@ -88,7 +71,6 @@ static CGFloat YPPhotoViewCellCaptionViewPadding = 10.0f;
     self.photoView.progressView.hidden = YES;
     self.photoView.progressView.progress = 0;
     self.photoView.progressView.progressLabel.text = @"0%";
-    self.captionOpened = YES;
 }
 
 - (void)setPhoto:(id<YPPhoto>)photo {
@@ -152,157 +134,6 @@ static CGFloat YPPhotoViewCellCaptionViewPadding = 10.0f;
             self.photoView.progressView.progressLabel.text = progrssStr;
         }
     });
-}
-
-#pragma mark - Caption view
-
-- (UILabel *)captionLabel {
-    if (!_captionLabel) {
-        _captionLabel = [[UILabel alloc] init];
-        _captionLabel.numberOfLines = 0;
-        _captionLabel.textColor = [UIColor whiteColor];
-        _captionLabel.font = self.captionFont;
-        
-        self.captionView = [[UIView alloc] init];
-        self.captionView.backgroundColor = [UIColor colorWithWhite:0.0f alpha:0.7f];
-        self.captionView.clipsToBounds = YES;
-        self.captionLabelScrollView = [[UIScrollView alloc] init];
-        self.captionLabelScrollView.indicatorStyle = UIScrollViewIndicatorStyleWhite;
-        
-        [self.captionLabelScrollView addSubview:_captionLabel];
-        [self.captionView addSubview:self.captionLabelScrollView];
-        [self addSubview:self.captionView];
-        
-        UITapGestureRecognizer *recognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(captionViewTapped)];
-        [self.captionLabelScrollView addGestureRecognizer:recognizer];
-        
-        self.captionView.alpha = 0.0f;
-        [UIView animateWithDuration:0.3f animations:^{
-            self.captionView.alpha = 1.0f;
-        }];
-    }
-    return _captionLabel;
-}
-
-- (void)setCaption:(NSString *)caption {
-    _caption = [caption copy];
-    
-    self.captionLabel.text = caption;
-    
-    [self setNeedsLayout];
-    [self layoutIfNeeded];
-}
-
-- (void)setAttributedCaption:(NSAttributedString *)attributedCaption {
-    _attributedCaption = attributedCaption;
-    
-    self.captionLabel.attributedText = attributedCaption;
-    
-    [self setNeedsLayout];
-    [self layoutIfNeeded];
-}
-
-/**
- *  计算captionView的高度
- */
-- (void)calculateAndUpdateCaptionViewFrame {
-    if (!self.caption && !self.attributedCaption) {
-        self.captionView.frame = CGRectZero;
-        return;
-    }
-    CGFloat width = self.bounds.size.width - YPPhotoViewCellCaptionViewPadding * 2;
-    if (self.attributedCaption) {
-        self.captionHeight = [self.attributedCaption boundingRectWithSize:CGSizeMake(width, CGFLOAT_MAX)
-                                                         options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
-                                                         context:nil].size.height;
-    } else if (self.caption) {
-        self.captionHeight = [self.caption boundingRectWithSize:CGSizeMake(width, CGFLOAT_MAX)
-                                       options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
-                                    attributes:@{NSFontAttributeName : self.captionLabel.font}
-                                       context:nil].size.height;
-    }
-    
-    CGFloat padding = YPPhotoViewCellCaptionViewPadding;
-    self.captionLabelScrollView.contentSize = CGSizeMake(self.bounds.size.width, self.captionHeight);
-    self.captionLabel.frame = CGRectMake(padding, 0, self.bounds.size.width - padding * 2, self.captionHeight);
-    
-    [self updateCaptionViewFrame];
-}
-
-- (void)updateCaptionViewFrame {
-    CGFloat padding = YPPhotoViewCellCaptionViewPadding;
-    CGFloat textHeight;
-    if (self.captionOpened) {
-        textHeight = MIN(self.maxHeightOfCaptionWhenOpened - 2 * padding , self.captionHeight);
-    } else {
-        textHeight = MIN(self.maxHeightOfCaptionWhenClosed - 2 * padding, self.captionHeight);
-    }
-    
-    CGSize boundsSize = self.bounds.size;
-    CGFloat captionViewHeight = MIN(self.maxHeightOfCaptionWhenOpened, textHeight) + 2 * padding;
-    
-    self.captionLabelScrollView.frame = CGRectMake(0, padding, boundsSize.width, captionViewHeight - 2 * padding);
-    CGFloat captionViewY;
-    if (self.captionViewHidden) {
-        captionViewY = boundsSize.height;
-    } else {
-        captionViewY = boundsSize.height - captionViewHeight;
-    }
-    self.captionView.frame = CGRectMake(0, captionViewY, boundsSize.width, captionViewHeight);
-    NSLog(@"caption--->%@ %d", NSStringFromCGRect(self.captionView.frame), _captionViewHidden);
-}
-
-- (void)setCaptionColor:(UIColor *)captionColor {
-    _captionColor = captionColor;
-    self.captionLabel.textColor = captionColor;
-}
-
-- (void)setCaptionFont:(UIFont *)captionFont {
-    _captionFont = captionFont;
-    self.captionLabel.font = captionFont;
-    
-    [self calculateAndUpdateCaptionViewFrame];
-}
-
-- (void)captionViewTapped {
-    if (self.captionHeight < self.maxHeightOfCaptionWhenClosed) {
-        return;
-    }
-    _captionOpened = !_captionOpened;
-    
-    [UIView animateWithDuration:self.animationDuration animations:^{
-        _updateCaptionViewFrameByTapped = YES;
-        [self updateCaptionViewFrame];
-    } completion:^(BOOL finished) {
-        _updateCaptionViewFrameByTapped = NO;
-    }];
-}
-
-- (void)setCaptionViewHidden:(BOOL)captionViewHidden {
-    [self setCaptionViewHidden:captionViewHidden animated:NO];
-}
-
-- (void)setCaptionViewHidden:(BOOL)hidden animated:(BOOL)animated {
-    if (_captionViewHidden == hidden) {
-        return;
-    }
-    _captionViewHidden = hidden;
-    CGRect frame = self.captionView.frame;
-    frame.origin.y = hidden ? self.bounds.size.height : self.bounds.size.height - frame.size.height;
-    if (animated) {
-        [UIView animateWithDuration:self.animationDuration animations:^{
-            _updateCaptionViewFrameByTapped = YES;
-            self.captionView.frame = frame;
-            NSLog(@"caption view--->%@ hidden-->%d", NSStringFromCGRect(self.captionView.frame), _captionViewHidden);
-        } completion:^(BOOL finished) {
-            _updateCaptionViewFrameByTapped = NO;
-        }];
-    } else {
-        _updateCaptionViewFrameByTapped = YES;
-        self.captionView.frame = frame;
-        _updateCaptionViewFrameByTapped = NO;
-        NSLog(@"caption view--->%@ hidden-->%d", NSStringFromCGRect(self.captionView.frame), _captionViewHidden);
-    }
 }
 
 @end

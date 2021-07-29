@@ -64,7 +64,7 @@
     }];
 }
 
-- (void)resetImage {
+- (void)releaseImage {
     if (self.imageURL || self.localPath || self.imageName) {
         self.image = nil;
     }

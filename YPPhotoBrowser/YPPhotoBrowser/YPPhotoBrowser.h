@@ -24,6 +24,8 @@
 - (void)photoBrowser:(YPPhotoBrowser *)browser didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 - (void)photoBrowser:(YPPhotoBrowser *)browser didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 
+- (void)photoBrowser:(YPPhotoBrowser *)browser didDeleteCellAtIndex:(NSUInteger)index;
+
 - (void)photoBrowser:(YPPhotoBrowser *)browser didClickCellAtIndex:(NSUInteger)index;
 - (void)photoBrowserDidClickMoreButton:(YPPhotoBrowser *)browser;
 
@@ -39,6 +41,8 @@ typedef NS_ENUM(NSInteger, YPPhotoBrowserAnimation) {
 
 @interface YPPhotoBrowser : UIViewController <YPPhotoPageViewDataSource, YPPhotoPageViewDelegate>
 
+@property (nonatomic, strong, readonly) NSMutableArray<YPPhoto *> *photos;
+
 @property (nonatomic, weak) id<YPPhotoBrowserDelegate> delegate;
 
 @property (nonatomic, strong) YPPhotoPageView *photoPageView;
@@ -50,9 +54,6 @@ typedef NS_ENUM(NSInteger, YPPhotoBrowserAnimation) {
 
 // 隐藏操作按钮，默认为NO
 @property (nonatomic, assign) BOOL moreButtonHidden;
-
-// 隐藏照片描述
-@property (nonatomic, assign) BOOL captionHidden;
 
 @property (nonatomic, assign) YPPhotoContentMode photoContentMode;
 

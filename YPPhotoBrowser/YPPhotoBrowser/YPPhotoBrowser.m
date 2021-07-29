@@ -23,8 +23,9 @@ static const int browser_key;
 
 @property (nonatomic, strong) UIImageView *animationImageView;
 
-@property (nonatomic, copy) NSArray *photos;
 @property (nonatomic, assign) BOOL statusBarHidden;
+
+@property (nonatomic, strong) NSMutableArray<YPPhoto *> *photos;
 
 @end
 
@@ -39,10 +40,10 @@ static const int browser_key;
                                                  selector:@selector(photoLoadingDidEnd:)
                                                      name:YPPhotoLoadingDidEndNotification
                                                    object:nil];
-        NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity:photos.count];
+        self.photos = [[NSMutableArray alloc] initWithCapacity:photos.count];
         for (id photo in photos) {
             if ([photo isKindOfClass:[YPPhoto class]]) {
-                [array addObject:photo];
+                [self.photos addObject:photo];
             } else {
                 NSString *string = photo;
                 YPPhoto *photoObj = [[YPPhoto alloc] init];
@@ -59,15 +60,13 @@ static const int browser_key;
                 } else if ([photo isKindOfClass:[UIImage class]]) {
                     photoObj.image = photo;
                 }
-                [array addObject:photoObj];
+                [self.photos addObject:photoObj];
             }
         }
-        self.photos = array;
         _animationStyle = YPPhotoBrowserAnimationNone;
         _transitionAnimationImageContentMode = UIViewContentModeScaleAspectFill;
         _animationDuration = 0.3f;
         _displayingIndex = 0;
-        _captionHidden = YES;
         
         NSNumber *isVCBasedStatusBarAppearanceNum = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIViewControllerBasedStatusBarAppearance"];
         if (isVCBasedStatusBarAppearanceNum) {
@@ -90,12 +89,12 @@ static const int browser_key;
     self.photoPageView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.photoPageView.dataSource = self;
     self.photoPageView.delegate = self;
+    [self.photoPageView registerClass:[YPPhotoViewCell class]];
     [self.view addSubview:self.photoPageView];
 
     self.photoPageView.displayingIndex = self.displayingIndex;
     self.photoPageView.moreButtonHidden = self.moreButtonHidden;
     self.photoPageView.pageIndicatorHidden = self.pageIndicatorHidden;
-    self.photoPageView.captionHidden = self.captionHidden;
     
     // 当转场模式为YPPhotoBrowserAnimationTransition时，需等到转场动画完成后，再调用以下代码
     if (self.animationStyle != YPPhotoBrowserAnimationTransition) {
@@ -155,11 +154,6 @@ static const int browser_key;
 - (void)setMoreButtonHidden:(BOOL)hidden {
     _moreButtonHidden = hidden;
     self.photoPageView.moreButtonHidden = hidden;
-}
-
-- (void)setCaptionHidden:(BOOL)hidden {
-    _captionHidden = hidden;
-    self.photoPageView.captionHidden = hidden;
 }
 
 - (void)setStatusBarHidden:(BOOL)statusBarHidden {
@@ -385,22 +379,10 @@ static const int browser_key;
 - (YPPhotoViewCell *)photoPageView:(YPPhotoPageView *)pageView cellForPhotoAtIndex:(NSUInteger)index {
     if (self.photos) {
         YPPhotoViewCell *cell = [self.photoPageView dequeueReusableCell];
-        if (!cell) {
-            cell = [[YPPhotoViewCell alloc] initWithFrame:self.view.bounds];
-        }
         cell.photoView.photoContentMode = self.photoContentMode;
         
         YPPhoto *photo = self.photos[index];
         cell.photo = photo;
-        if (!self.captionHidden) {
-            if (photo.attributedCaption) {
-                cell.attributedCaption = photo.attributedCaption;
-                cell.captionViewHidden = _isCaptionViewHidden;
-            } else if (photo.caption) {
-                cell.caption = photo.caption;
-                cell.captionViewHidden = _isCaptionViewHidden;
-            }
-        }
         return cell;
     } else {
         if (self.delegate) {
@@ -411,11 +393,6 @@ static const int browser_key;
 }
 
 #pragma mark - YPPhotoPageViewDelegate
-- (void)photoPageView:(YPPhotoPageView *)pageView willDisplayCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
-    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:willDisplayCell:forPhotoAtIndex:)]) {
-        [self.delegate photoBrowser:self willDisplayCell:cell forPhotoAtIndex:index];
-    }
-}
 
 // 显示某个页面时的回调
 - (void)photoPageView:(YPPhotoPageView *)pageView displayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
@@ -428,38 +405,14 @@ static const int browser_key;
     }
 }
 
-- (void)photoPageView:(YPPhotoPageView *)pageView didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
-    
-    NSInteger preIndex = index - 1;
-    if (preIndex > 0 && preIndex < self.photos.count - 1) {
-        YPPhoto *photo = self.photos[preIndex];
-        [photo preloadImage];
-    }
-    NSInteger nextIndex = index + 1;
-    if (nextIndex > 0 && nextIndex < self.photos.count - 1) {
-        YPPhoto *photo = self.photos[nextIndex];
-        [photo preloadImage];
-    }
-    preIndex = index - 2;
-    if (preIndex > 0 && preIndex < self.photos.count - 1) {
-        YPPhoto *photo = self.photos[preIndex];
-        [photo resetImage];
-    }
-    nextIndex = index + 2;
-    if (nextIndex > 0 && nextIndex < self.photos.count - 1) {
-        YPPhoto *photo = self.photos[nextIndex];
-        [photo resetImage];
-    }
-    
-    if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:didEndDeceleratingOnCell:forPhotoAtIndex:)]) {
-        [self.delegate photoBrowser:self didEndDeceleratingOnCell:cell forPhotoAtIndex:index];
-    }
+- (void)photoPageView:(YPPhotoPageView *)pageView preloadImageAtIndex:(NSUInteger)index {
+    YPPhoto *photo = self.photos[index];
+    [photo preloadImage];
 }
 
-- (void)photoPageView:(YPPhotoPageView *)pageView didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index {
-    if (self.delegate && [self.delegate respondsToSelector:@selector(photoPageView:didEndDisplayingCell:forPhotoAtIndex:)]) {
-        [self.delegate photoBrowser:self didEndDisplayingCell:cell forPhotoAtIndex:index];
-    }
+- (void)photoPageView:(YPPhotoPageView *)pageView releaseImageAtIndex:(NSUInteger)index {
+    YPPhoto *photo = self.photos[index];
+    [photo releaseImage];
 }
 
 - (void)photoPageView:(YPPhotoPageView *)pageView didClickCellAtIndex:(NSUInteger)index {
@@ -470,10 +423,6 @@ static const int browser_key;
             [self.navigationController setNavigationBarHidden:!self.navigationController.navigationBarHidden animated:YES];
             
             self.statusBarHidden = self.navigationController.navigationBarHidden;
-            
-            YPPhotoViewCell *cell = [self.photoPageView displayingCell];
-            _isCaptionViewHidden = !_isCaptionViewHidden;
-            [cell setCaptionViewHidden:_isCaptionViewHidden animated:YES];
         } else {
             [self dismissViewControllerAnimated:YES completion:nil];
             [self hide];
@@ -481,23 +430,40 @@ static const int browser_key;
     }
 }
 
+- (void)photoPageView:(id)pageView didLongPressAtIndex:(NSUInteger)index {
+    YPPhoto *photo = self.photos[index];
+    [UIAlertController showAlertWithTitle:[NSString stringWithFormat:@"确定删除“%@”?", photo.localPath.lastPathComponent] okButtonClicked:^{
+        if (self.delegate && [self.delegate respondsToSelector:@selector(photoBrowser:didDeleteCellAtIndex:)]) {
+            [self.delegate photoBrowser:self didDeleteCellAtIndex:index];
+        }
+        if (self.photos.count == 1) {
+            [self hide];
+        }
+        [self.photos removeObjectAtIndex:index];
+        [self.photoPageView deleteCellAtIndex:index animated:YES];
+    }];
+}
 
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)photoPageViewDidClickMoreButton:(YPPhotoPageView *)pageView {
-    YPPhoto *displayingPhoto = self.photos[self.displayingIndex];
-    UIImage *image = [displayingPhoto displayImage];
-    UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:[NSString stringWithFormat:@"%.0f x %.0f", image.size.width, image.size.height] delegate:self cancelButtonTitle:@"取消" destructiveButtonTitle:nil otherButtonTitles:@"保存到相册", nil];
-    [actionSheet showInView:self.view];
+    YPPhoto *photo = self.photos[self.displayingIndex];
+    NSURL *url = [NSURL fileURLWithPath:photo.localPath];
+    UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:@[url] applicationActivities:nil];
+    activityVC.excludedActivityTypes = @[
+        UIActivityTypePostToFacebook,
+        UIActivityTypePostToTwitter,
+        UIActivityTypePostToWeibo,
+        UIActivityTypeMessage,
+        UIActivityTypeMail,
+        UIActivityTypePrint,
+        UIActivityTypeCopyToPasteboard,
+        UIActivityTypeAssignToContact,
+        UIActivityTypeAddToReadingList,
+        UIActivityTypePostToFlickr,
+        UIActivityTypePostToVimeo,
+        UIActivityTypePostToTencentWeibo,
+        UIActivityTypeOpenInIBooks
+    ];
+    [self presentViewController:activityVC animated:YES completion:nil];
 }
-
-- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
-    if (buttonIndex == 0) {
-        YPPhoto *displayingPhoto = self.photos[self.displayingIndex];
-        [displayingPhoto saveImageToAlbumWithCompletionBlock:nil];
-    }
-}
-#pragma clang diagnostic pop
 
 @end

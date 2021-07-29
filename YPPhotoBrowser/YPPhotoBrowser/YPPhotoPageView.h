@@ -25,17 +25,18 @@ static const CGFloat YPPhotoPageViewPadding = 10.0f;
 @protocol YPPhotoPageViewDelegate <NSObject>
 
 @optional
-- (void)photoPageView:(YPPhotoPageView *)pageView willDisplayCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
 - (void)photoPageView:(YPPhotoPageView *)pageView displayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
-- (void)photoPageView:(YPPhotoPageView *)pageView didEndDeceleratingOnCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
-- (void)photoPageView:(YPPhotoPageView *)pageView didEndDisplayingCell:(YPPhotoViewCell *)cell forPhotoAtIndex:(NSUInteger)index;
+
+- (void)photoPageView:(YPPhotoPageView *)pageView preloadImageAtIndex:(NSUInteger)index;
+- (void)photoPageView:(YPPhotoPageView *)pageView releaseImageAtIndex:(NSUInteger)index;
 
 - (void)photoPageView:(YPPhotoPageView *)pageView didClickCellAtIndex:(NSUInteger)index;
+- (void)photoPageView:(YPPhotoPageView *)pageView didLongPressAtIndex:(NSUInteger)index;
 - (void)photoPageViewDidClickMoreButton:(YPPhotoPageView *)pageView;
 
 @end
 
-@interface YPPhotoPageView : UIView 
+@interface YPPhotoPageView : UIView
 
 @property (nonatomic, assign) BOOL pageIndicatorHidden;
 @property (nonatomic, assign) BOOL moreButtonHidden;
@@ -45,6 +46,9 @@ static const CGFloat YPPhotoPageViewPadding = 10.0f;
 
 @property (nonatomic, weak) id<YPPhotoPageViewDataSource> dataSource;
 @property (nonatomic, weak) id<YPPhotoPageViewDelegate> delegate;
+
+- (void)registerClass:(Class)cellClass;
+- (void)registerNib:(UINib *)nib;
 
 - (void)reloadPhotos;
 
@@ -56,5 +60,9 @@ static const CGFloat YPPhotoPageViewPadding = 10.0f;
 
 - (void)setMoreButtonHidden:(BOOL)hidden animated:(BOOL)animated;
 - (void)setPageIndicatorHidden:(BOOL)hidden animated:(BOOL)animated;
+
+- (void)setDisplayingIndex:(NSUInteger)displayingIndex animated:(BOOL)animated;
+
+- (void)deleteCellAtIndex:(NSUInteger)index animated:(BOOL)animated;
 
 @end
