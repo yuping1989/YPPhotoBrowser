@@ -15,5 +15,6 @@ s.resources    = 'YPPhotoBrowser/YPPhotoBrowser/YPPhotoBrowser.bundle'
 s.requires_arc = true
 
 s.dependency 'SDWebImage'
+s.dependency 'FLAnimatedImage'
 
 end

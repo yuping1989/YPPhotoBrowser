@@ -4,4 +4,5 @@ platform :ios, "7.0"
 
 target 'YPPhotoBrowser' do
   pod 'SDWebImage'
+  pod 'FLAnimatedImage'
 end
